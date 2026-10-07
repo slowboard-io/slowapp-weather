@@ -1,0 +1,10 @@
+version: 2
+updates:
+  - package-ecosystem: docker          # the slowapp-python-sci pin in Dockerfile
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions  # the slowapp-base workflow ref
+    directory: /
+    schedule:
+      interval: monthly

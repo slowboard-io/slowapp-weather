@@ -1,0 +1,15 @@
+name: app
+
+on:
+  push:
+    branches: [main]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  app:
+    uses: mike-anderson/slowapp-base/.github/workflows/app.yml@v1.0.0
+    permissions:
+      contents: write
+      packages: write

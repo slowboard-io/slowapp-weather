@@ -1,0 +1,1 @@
+{"latitude": 48.40001, "longitude": -123.399994, "generationtime_ms": 0.3256797790527344, "utc_offset_seconds": -25200, "timezone": "America/Vancouver", "timezone_abbreviation": "GMT-7", "elevation": 21.0, "current_units": {"time": "iso8601", "interval": "seconds", "us_aqi": "USAQI"}, "current": {"time": "2026-10-01T13:00", "interval": 3600, "us_aqi": 45}}

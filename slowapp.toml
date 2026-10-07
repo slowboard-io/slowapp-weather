@@ -1,0 +1,37 @@
+# Weather, legacy (epaper-dashboard docs/SLOWBOARD.md §8.8, P4a): the whole dashboard renderer in one
+# job, cut into the three thirds as three feeds. Retired in P5 by split map / today / airports apps.
+[app]
+id = "weather"
+title = "Weather"
+contract = 3
+image = "ghcr.io/mike-anderson/slowapp-weather"
+memory = "256m"
+tmp = "64m"
+timeout_s = 300
+network = "egress"
+data = { max_mb = 8 }            # /data/geomet: HRDPS tiles, memoised per valid hour, pruned after 2 days
+cache = { tmpfs_mb = 8 }         # /cache/weather: the rest of the API cache, in RAM
+imports = ["calendar:agenda"]    # P4 transitional (R3): the right third's agenda until the P5 split
+
+[[job]]
+name = "render"
+expected_s = 52
+
+[[feed]]
+name = "left"
+size = "slot"
+
+[[feed]]
+name = "middle"
+size = "slot"
+
+[[feed]]
+name = "right"
+size = "slot"
+
+[[example]]
+name = "live"
+caption = "1 Oct 2026 13:15: HRDPS GFA map, WPC fronts, Victoria conditions, airports, a made-up agenda"
+fixture = "fixtures/live-2026-10-01"
+now = "2026-10-01T13:15:00-07:00"
+feeds = { left = "452x444.k4", middle = "456x444.k4", right = "452x444.k4" }
