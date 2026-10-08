@@ -1,6 +1,6 @@
 # The weather slowapp: the renderer (numpy, SciPy, Shapely, contourpy, tifffile) on the scientific
 # base, pinned by tag and digest; Dependabot opens a PR when slowapp-base releases.
-FROM ghcr.io/mike-anderson/slowapp-python-sci:1.0.0@sha256:266dcf5509746d972ad6860c3770c46a3bebb98c7f53144e9dcd741bcaaca44b
+FROM ghcr.io/mike-anderson/slowapp-python-sci:1.1.0@sha256:08e6cd5c2e9a1983d5d86f4e629d8836f1faba4b1a813454ef258151907b4fe3
 COPY slowapp.toml /app/slowapp.toml
 # renderer/assets/fonts is a symlink to the base's /opt/slowapp/fonts (the same files).
 COPY epd /opt/app/epd
