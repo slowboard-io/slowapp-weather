@@ -65,11 +65,19 @@ def prepare(ctx):
 @job("render")
 def render(ctx):
     titles = []
-    if ctx.feed("sleep"):
-        titles.append(sleep.write(ctx, ctx.feed("sleep")))
     thirds = [s for s in ctx.feeds if s.feed in THIRDS]
     if thirds:
         titles += render_thirds(ctx, thirds)
+    if ctx.feed("sleep"):
+        try:
+            titles.append(sleep.write(ctx, ctx.feed("sleep")))
+        except Exception as e:
+            if not thirds:
+                raise
+            # The board's thirds are drawn: a strip the board doesn't show mustn't fail them.
+            # The sleep feed keeps its last bundle until a run for its own device draws it.
+            log(f"weather: sleep strip skipped: {e}")
+            titles.append(f"sleep: skipped ({e})")
     ctx.write_summary("ok", titles, [{"label": "Update now", "job": "render"}])
 
 

@@ -94,6 +94,8 @@ class Sleep(Base):
         ds = sleep.days(vic, datetime.fromisoformat("2026-10-01T07:00:00-07:00"))
         self.assertEqual([d["date"].strftime("%a") for d in ds], ["Thu", "Fri", "Sat", "Sun", "Mon", "Tue"])
         self.assertEqual((ds[0]["hi"], ds[0]["lo"]), (18, 10))
+        # A snapshot that doesn't cover today gives no days, not another day's as today's.
+        self.assertEqual(sleep.days(vic, datetime.fromisoformat("2026-11-20T07:00:00-08:00")), [])
 
 
 if __name__ == "__main__":

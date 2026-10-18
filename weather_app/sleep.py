@@ -28,9 +28,13 @@ def forecast(ctx):
 
 
 def days(vic, today):
-    """Today and the five after it, from the daily series; the icon from daytime hours (day_kind)."""
+    """Today and the five after it, from the daily series; the icon from daytime hours (day_kind).
+    None when today isn't in the series: another day's high and low would pass for today's."""
     d = vic["daily"]
-    start = d["time"].index(today.strftime("%Y-%m-%d")) if today.strftime("%Y-%m-%d") in d["time"] else 0
+    key = today.strftime("%Y-%m-%d")
+    if key not in d["time"]:
+        return []
+    start = d["time"].index(key)
     out = []
     for i in range(start, min(start + 6, len(d["time"]))):
         out.append(dict(
