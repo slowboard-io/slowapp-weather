@@ -13,6 +13,10 @@ aren't in it, so the map has no GFS cloud labels and the deck has no GFA detail 
 
 Events: /imports/calendar/agenda.json when the calendar app exports one (R3, transitional), else
 /data/events.json, else the renderer's own fallback.
+
+Contract 5: a run draws for one device and SLOWAPP_FEEDS lists only that device's feeds. The board
+gets the three thirds (the renderer); a sleep screen gets `sleep` alone (weather_app/sleep.py, one
+forecast request, no renderer run).
 """
 import json
 import os
@@ -25,6 +29,9 @@ from PIL import Image
 
 from slowapp_kit import Card, Transient, job, log, main
 
+from . import sleep
+
+THIRDS = ("left", "middle", "right")
 RENDERER_ROOT = Path(os.environ.get("WEATHER_RENDERER_ROOT", "/opt/app"))
 SCRATCH = Path(os.environ.get("WEATHER_SCRATCH", "/tmp/weather"))
 IMPORTS = Path(os.environ.get("SLOWAPP_IMPORTS", "/imports"))
@@ -57,6 +64,17 @@ def prepare(ctx):
 
 @job("render")
 def render(ctx):
+    titles = []
+    if ctx.feed("sleep"):
+        titles.append(sleep.write(ctx, ctx.feed("sleep")))
+    thirds = [s for s in ctx.feeds if s.feed in THIRDS]
+    if thirds:
+        titles += render_thirds(ctx, thirds)
+    ctx.write_summary("ok", titles, [{"label": "Update now", "job": "render"}])
+
+
+def render_thirds(ctx, thirds):
+    """The board's three thirds from the renderer; returns their summary lines."""
     run, feeds = prepare(ctx)
 
     cmd = [sys.executable, "-m", "renderer.weather", "--live-only", "--feeds-out", str(feeds)]
@@ -80,7 +98,7 @@ def render(ctx):
         raise Transient(msg)                   # live: almost always an upstream fetch
 
     titles = []
-    for surface in ctx.feeds:
+    for surface in thirds:
         root = feeds / "feeds" / surface.feed
         if not (root / "deck.json").is_file():
             raise RuntimeError(f"renderer wrote no feed {surface.feed!r}")
@@ -89,7 +107,7 @@ def render(ctx):
                       c.get("peek", ""), c["kind"]) for c in deck["cards"]]
         ctx.write_feed(surface.feed, cards, deck["valid_from"], deck["valid_until"])
         titles.append(f"{surface.feed}: " + " · ".join(c.title for c in cards))
-    ctx.write_summary("ok", titles, [{"label": "Update now", "job": "render"}])
+    return titles
 
 
 if __name__ == "__main__":

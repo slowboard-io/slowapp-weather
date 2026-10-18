@@ -1,5 +1,7 @@
 """Weather app wrapper tests (no renderer run), inside the base image: PYTHONPATH=.:/opt/slowapp"""
+import json
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -7,6 +9,7 @@ from unittest import mock
 
 import slowapp_kit as kit
 import weather_app.__main__ as wp
+from weather_app import sleep
 
 
 class Base(unittest.TestCase):
@@ -58,6 +61,39 @@ class Cache(Base):
         run, _ = wp.prepare(self.ctx("fixture"))
         self.assertFalse((run / "cache").is_symlink())
         self.assertEqual(sorted(os.listdir(run / "cache")), ["wind.json"])
+
+
+FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "live-2026-10-01"
+
+
+class Sleep(Base):
+    """Contract 5: a run for a sleep screen draws only `sleep`, from one forecast, and never starts
+    the renderer."""
+
+    def test_sleep_only_run_skips_the_renderer(self):
+        shutil.copy(FIXTURE / "victoria_live.json", self.tmp / "data")
+        env = dict(
+            SLOWAPP_CONTRACT="5", SLOWAPP_MODE="fixture", SLOWAPP_NOW="2026-10-01T07:00:00-07:00",
+            SLOWAPP_STATE=str(self.tmp / "data"), SLOWAPP_CACHE=str(self.tmp / "cache"),
+            SLOWAPP_OUT=str(self.tmp / "out"), SLOWAPP_MANIFEST="/nonexistent",
+            SLOWAPP_FEEDS=json.dumps([{"feed": "sleep", "w": 1360, "h": 360, "inks": "g16", "bpp": 8}]))
+        ctx = kit.Context.from_env(env=env)
+        with mock.patch.object(wp.subprocess, "run", side_effect=AssertionError("renderer started")):
+            self.assertEqual(kit.execute("render", ctx)[0], 0)
+        out = self.tmp / "out"
+        self.assertEqual(os.listdir(out / "feeds"), ["sleep"])
+        deck = json.loads((out / "feeds" / "sleep" / "deck.json").read_text())
+        self.assertEqual(deck["surface"], "1360x360.g16")
+        self.assertEqual(deck["cards"][0]["peek"], "H 18° L 10°")
+        self.assertEqual(deck["valid_until"], "2026-10-02T00:00:00-07:00")
+        kit.check_png((out / "feeds" / "sleep" / "cards" / "home.png").read_bytes(), (1360, 360), "g16")
+
+    def test_days_start_today(self):
+        vic = json.loads((FIXTURE / "victoria_live.json").read_text())
+        from datetime import datetime
+        ds = sleep.days(vic, datetime.fromisoformat("2026-10-01T07:00:00-07:00"))
+        self.assertEqual([d["date"].strftime("%a") for d in ds], ["Thu", "Fri", "Sat", "Sun", "Mon", "Tue"])
+        self.assertEqual((ds[0]["hi"], ds[0]["lo"]), (18, 10))
 
 
 if __name__ == "__main__":
