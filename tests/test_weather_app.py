@@ -85,6 +85,8 @@ class Sleep(Base):
         deck = json.loads((out / "feeds" / "sleep" / "deck.json").read_text())
         self.assertEqual(deck["surface"], "1360x360.g16")
         self.assertEqual(deck["cards"][0]["peek"], "H 18° L 10°")
+        # Named, not "Today": a Supernote can hold the strip a day or more.
+        self.assertEqual(deck["cards"][0]["title"], "Thursday")
         self.assertEqual(deck["valid_until"], "2026-10-02T00:00:00-07:00")
         kit.check_png((out / "feeds" / "sleep" / "cards" / "home.png").read_bytes(), (1360, 360), "g16")
 
@@ -94,6 +96,12 @@ class Sleep(Base):
         ds = sleep.days(vic, datetime.fromisoformat("2026-10-01T07:00:00-07:00"))
         self.assertEqual([d["date"].strftime("%a") for d in ds], ["Thu", "Fri", "Sat", "Sun", "Mon", "Tue"])
         self.assertEqual((ds[0]["hi"], ds[0]["lo"]), (18, 10))
+        self.assertEqual(sleep.rain(dict(pop=0, mm=0)), "No rain expected")
+        self.assertEqual(sleep.rain(dict(pop=5, mm=0.1)), "No rain expected")
+        self.assertEqual(sleep.rain(dict(pop=60, mm=4.24)), "Rain 60% · 4.2 mm")
+        self.assertEqual(sleep.rain(dict(pop=90, mm=23.6)), "Rain 90% · 24 mm")
+        self.assertEqual(sleep.rain(dict(pop=0, mm=0.5)), "Rain 0% · 0.5 mm")
+        self.assertEqual(sleep.rain(dict(pop=29, mm=0.0)), "Rain 29%")
         # A snapshot that doesn't cover today gives no days, not another day's as today's.
         self.assertEqual(sleep.days(vic, datetime.fromisoformat("2026-11-20T07:00:00-08:00")), [])
 

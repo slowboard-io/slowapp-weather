@@ -81,6 +81,17 @@ def icon(d, kind, pop, cx, cy, size):
             d.line((x + 4, y - 6, x - 4, y + 10), fill=INK, width=max(3, size // 20))
 
 
+def rain(day):
+    """The day's rain, always said: the chance and the amount, or that none is expected."""
+    pop, mm = day["pop"], day["mm"]
+    if pop < 10 and mm < 0.2:
+        return "No rain expected"
+    if mm < 0.1:
+        return f"Rain {pop}%"
+    amount = f"{mm:.1f} mm" if mm < 10 else f"{round(mm)} mm"
+    return f"Rain {pop}% · {amount}"
+
+
 def draw(w, h, days_, now):
     """The strip at w x h in the sixteen greys."""
     img = Image.new("RGB", (w, h), PAPER)
@@ -89,19 +100,18 @@ def draw(w, h, days_, now):
     pad = int(24 * s)
     today, rest = days_[0], days_[1:6]
 
-    # Today: the date, the high and the low, what the day looks like.
+    # The day itself, by name: a Supernote may show this strip for a day or more without a
+    # refresh, so "Today" could be wrong. Its date, high and low, conditions and rain.
     left_w = int(w * .3)
-    d.text((pad, pad), "Today", font=serif(int(40 * s)), fill=INK, anchor="lt")
-    d.text((pad, pad + int(52 * s)), now.strftime("%A %-d %B"), font=font(int(24 * s), False), fill=SOFT, anchor="lt")
-    y = pad + int(110 * s)
-    d.text((pad, y), f"{today['hi']}°", font=font(int(104 * s)), fill=INK, anchor="lt")
-    hi_w = d.textlength(f"{today['hi']}°", font=font(int(104 * s)))
-    d.text((pad + hi_w + int(18 * s), y + int(16 * s)), "high", font=font(int(22 * s), False), fill=SOFT, anchor="lt")
-    d.text((pad + hi_w + int(18 * s), y + int(52 * s)), f"low {today['lo']}°", font=font(int(30 * s)), fill=INK, anchor="lt")
-    words = CONDITIONS.get(today["code"], "")
-    if today["pop"] >= 30:
-        words = f"{words}, {today['pop']}% rain" if words else f"{today['pop']}% rain"
-    d.text((pad, h - pad), words, font=font(int(26 * s), False), fill=INK, anchor="lb")
+    d.text((pad, pad), today["date"].strftime("%A"), font=serif(int(40 * s)), fill=INK, anchor="lt")
+    d.text((pad, pad + int(52 * s)), today["date"].strftime("%-d %B"), font=font(int(24 * s), False), fill=SOFT, anchor="lt")
+    y = pad + int(96 * s)
+    d.text((pad, y), f"{today['hi']}°", font=font(int(96 * s)), fill=INK, anchor="lt")
+    hi_w = d.textlength(f"{today['hi']}°", font=font(int(96 * s)))
+    d.text((pad + hi_w + int(18 * s), y + int(14 * s)), "high", font=font(int(22 * s), False), fill=SOFT, anchor="lt")
+    d.text((pad + hi_w + int(18 * s), y + int(48 * s)), f"low {today['lo']}°", font=font(int(30 * s)), fill=INK, anchor="lt")
+    d.text((pad, h - pad - int(38 * s)), CONDITIONS.get(today["code"], ""), font=font(int(26 * s), False), fill=INK, anchor="lb")
+    d.text((pad, h - pad), rain(today), font=font(int(26 * s)), fill=INK, anchor="lb")
     d.line((left_w, pad, left_w, h - pad), fill=RULE, width=max(2, int(3 * s)))
 
     # The next five days.
@@ -129,8 +139,9 @@ def write(ctx, surface):
         raise RuntimeError(f"forecast has {len(ds)} days from today, need 6")
     img = draw(surface.w, surface.h, ds, ctx.now)
     t = ds[0]
-    # Good until the day changes: the strip is about today and the days after.
+    # Good until the day changes. The strip names its day, so a device that holds it longer
+    # still shows something true, just about yesterday.
     midnight = (ctx.now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    ctx.write_feed(surface.feed, [Card("home", img, title="Today", peek=f"H {t['hi']}° L {t['lo']}°")],
+    ctx.write_feed(surface.feed, [Card("home", img, title=f"{t['date']:%A}", peek=f"H {t['hi']}° L {t['lo']}°")],
                    valid_until=midnight)
-    return f"sleep: H {t['hi']}° L {t['lo']}°, then " + " ".join(f"{d['date']:%a} {d['hi']}°" for d in ds[1:])
+    return f"sleep: {t['date']:%a} H {t['hi']}° L {t['lo']}°, {rain(t)}; then " + " ".join(f"{d['date']:%a} {d['hi']}°" for d in ds[1:])
