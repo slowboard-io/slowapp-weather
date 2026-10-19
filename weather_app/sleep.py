@@ -96,7 +96,7 @@ def draw(w, h, days_, now):
     """The strip at w x h in the sixteen greys."""
     img = Image.new("RGB", (w, h), PAPER)
     d = ImageDraw.Draw(img)
-    s = h / 360                                   # drawn for 1360 x 360; scales with the height
+    s = h / 360                                   # designed at 1360 x 360; scales with the height (1284 x 340 now)
     pad = int(24 * s)
     today, rest = days_[0], days_[1:6]
 

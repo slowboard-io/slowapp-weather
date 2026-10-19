@@ -34,7 +34,7 @@ size = "slot"
 # Today's high and low and the next five days, for the Supernote sleep screen (epaper-dashboard devices/supernote-plugin, Slowboard Sleep Screen).
 [[feed]]
 name = "sleep"
-size = "1360x360"
+size = "1284x340"
 inks = ["g16"]
 
 [[example]]
@@ -49,4 +49,4 @@ name = "sleep"
 caption = "1 Oct 2026 07:00: the Supernote sleep-screen strip, today and five days"
 fixture = "fixtures/live-2026-10-01"
 now = "2026-10-01T07:00:00-07:00"
-feeds = { sleep = "1360x360.g16" }
+feeds = { sleep = "1284x340.g16" }
