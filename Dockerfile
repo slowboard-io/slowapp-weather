@@ -1,6 +1,6 @@
 # The weather slowapp: the renderer (numpy, SciPy, Shapely, contourpy, tifffile) on the scientific
 # base, pinned by tag and digest; Dependabot opens a PR when slowapp-base releases.
-FROM ghcr.io/mike-anderson/slowapp-python-sci:1.4.1@sha256:0e5c705a961be26bbae1c8b3abca0b72c09bdf0397b78f8523fc196c5543f41f
+FROM ghcr.io/mike-anderson/slowapp-python-sci:1.5.0@sha256:fe0eadd3570670c298dff90f7301c5851612f7188c5b7cae450ec5137c84eec9
 # Public holidays: the `holidays` wheel and its two dependencies, pinned with their sha256 in
 # wheels.lock and unpacked into /opt/app/site (no pip in the base). First, so app changes reuse the layer.
 COPY wheels.lock tools/install_wheels.py /tmp/wheels/
