@@ -76,19 +76,19 @@ class Sleep(Base):
             SLOWAPP_CONTRACT="5", SLOWAPP_MODE="fixture", SLOWAPP_NOW="2026-10-01T07:00:00-07:00",
             SLOWAPP_STATE=str(self.tmp / "data"), SLOWAPP_CACHE=str(self.tmp / "cache"),
             SLOWAPP_OUT=str(self.tmp / "out"), SLOWAPP_MANIFEST="/nonexistent",
-            SLOWAPP_FEEDS=json.dumps([{"feed": "sleep", "w": 1360, "h": 360, "inks": "g16", "bpp": 8}]))
+            SLOWAPP_FEEDS=json.dumps([{"feed": "sleep", "w": 1284, "h": 340, "inks": "g16", "bpp": 8}]))
         ctx = kit.Context.from_env(env=env)
         with mock.patch.object(wp.subprocess, "run", side_effect=AssertionError("renderer started")):
             self.assertEqual(kit.execute("render", ctx)[0], 0)
         out = self.tmp / "out"
         self.assertEqual(os.listdir(out / "feeds"), ["sleep"])
         deck = json.loads((out / "feeds" / "sleep" / "deck.json").read_text())
-        self.assertEqual(deck["surface"], "1360x360.g16")
+        self.assertEqual(deck["surface"], "1284x340.g16")
         self.assertEqual(deck["cards"][0]["peek"], "H 18° L 10°")
         # Named, not "Today": a Supernote can hold the strip a day or more.
         self.assertEqual(deck["cards"][0]["title"], "Thursday")
         self.assertEqual(deck["valid_until"], "2026-10-02T00:00:00-07:00")
-        kit.check_png((out / "feeds" / "sleep" / "cards" / "home.png").read_bytes(), (1360, 360), "g16")
+        kit.check_png((out / "feeds" / "sleep" / "cards" / "home.png").read_bytes(), (1284, 340), "g16")
 
     def test_days_start_today(self):
         vic = json.loads((FIXTURE / "victoria_live.json").read_text())
