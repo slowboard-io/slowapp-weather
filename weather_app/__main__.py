@@ -48,10 +48,11 @@ def events_file(ctx):
 
 
 def events(ctx):
-    """-> (the agenda plus the built-in holidays, where the agenda came from)."""
-    src = events_file(ctx) or RENDERER_ROOT / RENDERER_EVENTS
+    """-> (the agenda plus the built-in holidays, where the agenda came from). With no calendar,
+    a real run shows the holidays alone; the renderer's made-up agenda is for the fixtures."""
+    src = events_file(ctx) or (RENDERER_ROOT / RENDERER_EVENTS if ctx.fixture else None)
     try:
-        agenda = json.loads(src.read_text()) if src.is_file() else []
+        agenda = json.loads(src.read_text()) if src and src.is_file() else []
     except (OSError, ValueError) as e:
         log(f"weather: {src}: {e}; holidays only")
         agenda = []

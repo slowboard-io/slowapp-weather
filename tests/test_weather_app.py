@@ -126,10 +126,13 @@ class Holidays(Base):
     def test_events_merge_the_import_or_stand_alone(self):
         c = self.ctx()
         with mock.patch.object(holiday, "builtin", return_value=THANKSGIVING):
-            # No import and no /data/events.json: the renderer's own agenda plus the holidays.
-            evs, src = wp.events(c)
+            # No import and no /data/events.json: a live run has the holidays alone, a fixture
+            # run the renderer's made-up agenda as well.
+            self.assertEqual(wp.events(c), (THANKSGIVING, None))
+            evs, src = wp.events(self.ctx(mode="fixture"))
             self.assertEqual(src, ROOT / wp.RENDERER_EVENTS)
             self.assertIn(THANKSGIVING[0], evs)
+            self.assertGreater(len(evs), len(THANKSGIVING))
             agenda = self.tmp / "imports" / "calendar" / "agenda.json"
             agenda.parent.mkdir()
             agenda.write_text(json.dumps([hol("2026-10-12", "Thanksgiving")]))
