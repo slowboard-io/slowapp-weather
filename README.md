@@ -14,7 +14,8 @@ This is the *legacy* app (plan P4a). P5 splits it into map, today and airports a
 | Base | `slowapp-python-sci` (numpy, SciPy, Shapely, contourpy, tifffile), pinned by tag and digest in `Dockerfile` |
 | Grants | `network = "egress"`, 256 MB, `/data` ≤ 8 MB (GeoMet tiles memoised per valid hour), 8 MB RAM cache, imports `calendar:agenda` |
 | Code | `weather_app/` is the kit wrapper; `renderer/` is the renderer; `epd/` holds just the layout, the pixel packing and the panel size |
-| Fixture | `fixtures/live-2026-10-01`, a snapshot of every fetch, so CI renders offline (`network none`) |
+| Fixture | `fixtures/live-2026-10-01`, a snapshot of every fetch, so CI renders offline (`network none`); `fixtures/sleep-2026-10-12`, its forecast relabelled to Thanksgiving for the sleep strip |
+| Holidays | Built in with [`holidays`](https://pypi.org/project/holidays/) (`wheels.lock`, unpacked into `/opt/app/site`). Settings `holiday_country` (ISO 3166-1 alpha-2, default `CA`) and `holiday_subdiv` (default `BC`); `none` turns either off. Shown as the tag under the middle third's date and under the date on the sleep strip. An imported agenda's own holidays win on their dates. |
 
 ## Where the renderer lives
 

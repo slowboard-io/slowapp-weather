@@ -4,6 +4,9 @@ is "now": no current temperature, sparkline or callouts.
 
 One Open-Meteo request (the same Victoria forecast the board's middle third uses), a second or two,
 none of the map's GeoMet tiles. Fixture mode reads the example's victoria_live.json.
+
+A public holiday (weather_app/holiday.py, or the calendar's) goes under the date, in bold, and the
+high and low move down a line for it (two for a long name).
 """
 import math
 import urllib.parse
@@ -11,7 +14,7 @@ from datetime import datetime, timedelta
 
 from PIL import Image, ImageDraw
 
-from renderer.weather import CONDITIONS, MODEL, ORIGIN, ZONE_NAME, day_kind, font, serif
+from renderer.weather import CONDITIONS, MODEL, ORIGIN, ZONE_NAME, condensed, day_kind, ellipsize, font, serif
 from slowapp_kit import Card, grey, snap_g16
 
 SNAPSHOT = "victoria_live.json"
@@ -92,8 +95,21 @@ def rain(day):
     return f"Rain {pop}% · {amount}"
 
 
-def draw(w, h, days_, now):
-    """The strip at w x h in the sixteen greys."""
+def holiday_lines(d, holiday, fnt, width, most):
+    """`holiday` in at most `most` lines of `width`: word-wrapped, the last line cut to fit."""
+    words, lines = holiday.split(), []
+    while words and len(lines) < most:
+        line = words.pop(0)
+        while words and d.textlength(f"{line} {words[0]}", font=fnt) <= width:
+            line += " " + words.pop(0)
+        lines.append(line)
+    if words or (lines and d.textlength(lines[-1], font=fnt) > width):
+        lines[-1] = ellipsize(d, " ".join([lines[-1]] + words), fnt, width)
+    return lines
+
+
+def draw(w, h, days_, now, holiday=None):
+    """The strip at w x h in the sixteen greys; `holiday` is today's holiday's name, if any."""
     img = Image.new("RGB", (w, h), PAPER)
     d = ImageDraw.Draw(img)
     s = h / 360                                   # designed at 1360 x 360; scales with the height (1284 x 340 now)
@@ -106,6 +122,17 @@ def draw(w, h, days_, now):
     d.text((pad, pad), today["date"].strftime("%A"), font=serif(int(40 * s)), fill=INK, anchor="lt")
     d.text((pad, pad + int(52 * s)), today["date"].strftime("%-d %B"), font=font(int(24 * s), False), fill=SOFT, anchor="lt")
     y = pad + int(96 * s)
+    if holiday:
+        # Under the date, and the high and low move down for it: one line, or two for a long
+        # name when the gap above the conditions has room (it does at 1284 x 340).
+        hf, lh = condensed(int(24 * s), True), int(28 * s)
+        hi_bottom = d.textbbox((pad, y), f"{today['hi']}°", font=font(int(96 * s)), anchor="lt")[3]
+        cond_top = d.textbbox((pad, h - pad - int(38 * s)), "Ag", font=font(int(26 * s), False), anchor="lb")[1]
+        room = cond_top - hi_bottom - int(12 * s)
+        lines = holiday_lines(d, holiday, hf, left_w - 2 * pad, max(1, min(2, room // lh)))
+        for i, line in enumerate(lines):
+            d.text((pad, y - int(14 * s) + i * lh), line, font=hf, fill=INK, anchor="lt")
+        y += len(lines) * lh
     d.text((pad, y), f"{today['hi']}°", font=font(int(96 * s)), fill=INK, anchor="lt")
     hi_w = d.textlength(f"{today['hi']}°", font=font(int(96 * s)))
     d.text((pad + hi_w + int(18 * s), y + int(14 * s)), "high", font=font(int(22 * s), False), fill=SOFT, anchor="lt")
@@ -131,17 +158,19 @@ def draw(w, h, days_, now):
     return snap_g16(img)
 
 
-def write(ctx, surface):
-    """Fetch, draw and write the sleep feed for `surface`. Returns its summary line."""
+def write(ctx, surface, holiday=None):
+    """Fetch, draw and write the sleep feed for `surface` (with today's holiday's name, if any).
+    Returns its summary line."""
     vic = forecast(ctx)
     ds = days(vic, ctx.now)
     if len(ds) < 6:
         raise RuntimeError(f"forecast has {len(ds)} days from today, need 6")
-    img = draw(surface.w, surface.h, ds, ctx.now)
+    img = draw(surface.w, surface.h, ds, ctx.now, holiday)
     t = ds[0]
     # Good until the day changes. The strip names its day, so a device that holds it longer
     # still shows something true, just about yesterday.
     midnight = (ctx.now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    ctx.write_feed(surface.feed, [Card("home", img, title=f"{t['date']:%A}", peek=f"H {t['hi']}° L {t['lo']}°")],
+    title = f"{t['date']:%A}" + (f", {holiday}" if holiday else "")
+    ctx.write_feed(surface.feed, [Card("home", img, title=title, peek=f"H {t['hi']}° L {t['lo']}°")],
                    valid_until=midnight)
-    return f"sleep: {t['date']:%a} H {t['hi']}° L {t['lo']}°, {rain(t)}; then " + " ".join(f"{d['date']:%a} {d['hi']}°" for d in ds[1:])
+    return f"sleep: {t['date']:%a}{f' ({holiday})' if holiday else ''} H {t['hi']}° L {t['lo']}°, {rain(t)}; then " + " ".join(f"{d['date']:%a} {d['hi']}°" for d in ds[1:])

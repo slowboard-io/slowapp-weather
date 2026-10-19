@@ -13,7 +13,14 @@ timeout_s = 300
 network = "egress"
 data = { max_mb = 8 }            # /data/geomet: HRDPS tiles, memoised per valid hour, pruned after 2 days
 cache = { tmpfs_mb = 8 }         # /cache/weather: the rest of the API cache, in RAM
-imports = ["calendar:agenda"]    # P4 transitional (R3): the right third's agenda until the P5 split
+imports = ["calendar:agenda"]    # P4 transitional (R3): the right third's agenda until the P5 split; holidays are built in
+
+# Public holidays, built in (the `holidays` package), for a hub without a calendar app. The
+# imported agenda's own holidays win on their dates. "none" turns either off (slowhub stores an
+# empty text box as the default).
+[settings]
+holiday_country = { type = "string", default = "CA", label = "Public holidays: country", help = "ISO 3166-1 two-letter code (CA, US, GB, ...), or none" }
+holiday_subdiv = { type = "string", default = "BC", label = "Public holidays: province or state", help = "The subdivision's code without the country (BC, ON, QC, ...), or none for national holidays only" }
 
 [[job]]
 name = "render"
@@ -49,4 +56,11 @@ name = "sleep"
 caption = "1 Oct 2026 07:00: the Supernote sleep-screen strip, today and five days"
 fixture = "fixtures/live-2026-10-01"
 now = "2026-10-01T07:00:00-07:00"
+feeds = { sleep = "1284x340.g16" }
+
+[[example]]
+name = "sleep-holiday"
+caption = "Thanksgiving, 12 Oct 2026 07:00: the sleep strip with a built-in holiday (the 1 Oct forecast, relabelled)"
+fixture = "fixtures/sleep-2026-10-12"
+now = "2026-10-12T07:00:00-07:00"
 feeds = { sleep = "1284x340.g16" }

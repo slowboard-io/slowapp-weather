@@ -12,7 +12,9 @@ example's /data is copied to a scratch cache and the renderer runs without --ref
 aren't in it, so the map has no GFS cloud labels and the deck has no GFA detail cards).
 
 Events: /imports/calendar/agenda.json when the calendar app exports one (R3, transitional), else
-/data/events.json, else the renderer's own fallback.
+/data/events.json, else the renderer's own fallback (its made-up agenda), plus the built-in public
+holidays (weather_app/holiday.py, settings holiday_country / holiday_subdiv) on dates the agenda has
+none for. The merged list goes to the renderer as one --events file.
 
 Contract 5: a run draws for one device and SLOWAPP_FEEDS lists only that device's feeds. The board
 gets the three thirds (the renderer); a sleep screen gets `sleep` alone (weather_app/sleep.py, one
@@ -29,10 +31,11 @@ from PIL import Image
 
 from slowapp_kit import Card, Transient, job, log, main
 
-from . import sleep
+from . import holiday, sleep
 
 THIRDS = ("left", "middle", "right")
 RENDERER_ROOT = Path(os.environ.get("WEATHER_RENDERER_ROOT", "/opt/app"))
+RENDERER_EVENTS = Path("renderer/assets/events.example.json")   # the renderer's own fallback, under RENDERER_ROOT
 SCRATCH = Path(os.environ.get("WEATHER_SCRATCH", "/tmp/weather"))
 IMPORTS = Path(os.environ.get("SLOWAPP_IMPORTS", "/imports"))
 
@@ -42,6 +45,18 @@ def events_file(ctx):
         if p.is_file():
             return p
     return None
+
+
+def events(ctx):
+    """-> (the agenda plus the built-in holidays, where the agenda came from)."""
+    src = events_file(ctx) or RENDERER_ROOT / RENDERER_EVENTS
+    try:
+        agenda = json.loads(src.read_text()) if src.is_file() else []
+    except (OSError, ValueError) as e:
+        log(f"weather: {src}: {e}; holidays only")
+        agenda = []
+    country, subdiv = holiday.setting(ctx.settings)
+    return holiday.merge(agenda, holiday.builtin(country, subdiv, ctx.now.date())), src
 
 
 def prepare(ctx):
@@ -70,7 +85,7 @@ def render(ctx):
         titles += render_thirds(ctx, thirds)
     if ctx.feed("sleep"):
         try:
-            titles.append(sleep.write(ctx, ctx.feed("sleep")))
+            titles.append(sleep.write(ctx, ctx.feed("sleep"), holiday.today(events(ctx)[0], ctx.now.date())))
         except Exception as e:
             if not thirds:
                 raise
@@ -88,13 +103,14 @@ def render_thirds(ctx, thirds):
     cmd = [sys.executable, "-m", "renderer.weather", "--live-only", "--feeds-out", str(feeds)]
     if not ctx.fixture:
         cmd.append("--refresh")
-    ev = events_file(ctx)
-    if ev:
-        cmd += ["--events", str(ev)]
+    evs, src = events(ctx)
+    ev = SCRATCH / "events.json"
+    ev.write_text(json.dumps(evs))
+    cmd += ["--events", str(ev)]
     env = dict(os.environ, EPAPER_RUN=str(run), EPAPER_STATE=str(SCRATCH / "state"))
     left = ctx.remaining()
     timeout = max(10, left - 10) if left is not None else int(ctx.manifest.get("app", {}).get("timeout_s", 300)) - 10
-    log(f"weather: {' '.join(cmd[1:])} (events: {ev or 'renderer default'})")
+    log(f"weather: {' '.join(cmd[1:])} (events: {src} + holidays, {len(evs)} in all)")
     try:
         p = subprocess.run(cmd, cwd=RENDERER_ROOT, env=env, timeout=timeout, stdout=sys.stderr)
     except subprocess.TimeoutExpired:
