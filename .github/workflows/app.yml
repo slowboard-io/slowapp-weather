@@ -9,7 +9,7 @@ on:
 
 jobs:
   app:
-    uses: mike-anderson/slowapp-base/.github/workflows/app.yml@v1.0.0
+    uses: mike-anderson/slowapp-base/.github/workflows/app.yml@v1.5.0
     permissions:
       contents: write
       packages: write
